@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken'
 import mongoose, { Document, HydratedDocument, Model, Types } from 'mongoose'
 import validator from 'validator'
 import md5 from 'md5'
+import omit from 'lodash/omit' // Добавлен импорт
 
 import { ACCESS_TOKEN, REFRESH_TOKEN } from '../config'
 import UnauthorizedError from '../errors/unauthorized-error'
@@ -106,11 +107,8 @@ const userSchema = new mongoose.Schema<IUser, IUserModel, IUserMethods>(
         toJSON: {
             virtuals: true,
             transform: (_doc, ret) => {
-                delete ret.tokens
-                delete ret.password
-                delete ret._id
-                delete ret.roles
-                return ret
+                // Замена delete на omit для избежания TS-ошибок
+                return omit(ret, ['tokens', 'password', '_id', 'roles'])
             },
         },
     }
@@ -135,13 +133,13 @@ userSchema.methods.generateAccessToken = function generateAccessToken() {
     // Создание accessToken токена возможно в контроллере авторизации
     return jwt.sign(
         {
-            _id: user._id.toString(),
+            _id: user.id,  // Замена user._id.toString() на user.id (mongoose getter)
             email: user.email,
         },
         ACCESS_TOKEN.secret,
         {
             expiresIn: ACCESS_TOKEN.expiry,
-            subject: user.id.toString(),
+            subject: user.id,  // Уже использует user.id
         }
     )
 }
@@ -152,12 +150,12 @@ userSchema.methods.generateRefreshToken =
         // Создание refresh токена возможно в контроллере авторизации/регистрации
         const refreshToken = jwt.sign(
             {
-                _id: user._id.toString(),
+                _id: user.id,  // Замена user._id.toString() на user.id
             },
             REFRESH_TOKEN.secret,
             {
                 expiresIn: REFRESH_TOKEN.expiry,
-                subject: user.id.toString(),
+                subject: user.id,  // Уже использует user.id
             }
         )
 
