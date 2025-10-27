@@ -1,4 +1,7 @@
-export { default } from './order'
-export { OrderAddress } from './order-address'
-export { OrderContacts } from './order-contacts'
-export { OrderSuccess } from './order-success'
+import Order from './order'
+import { OrderAddress } from './order-address'
+import { OrderContacts } from './order-contacts'
+import { OrderSuccess } from './order-success'
+
+export default Order
+export { OrderAddress, OrderContacts, OrderSuccess }

@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken'
 import mongoose, { Document, HydratedDocument, Model, Types } from 'mongoose'
 import validator from 'validator'
 import md5 from 'md5'
-import omit from 'lodash/omit' // Добавлен импорт
+import omit from 'lodash/omit'
 
 import { ACCESS_TOKEN, REFRESH_TOKEN } from '../config'
 import UnauthorizedError from '../errors/unauthorized-error'
@@ -106,10 +106,7 @@ const userSchema = new mongoose.Schema<IUser, IUserModel, IUserMethods>(
         // Возможно удаление пароля в контроллере создания, т.к. select: false не работает в случае создания сущности https://mongoosejs.com/docs/api/document.html#Document.prototype.toJSON()
         toJSON: {
             virtuals: true,
-            transform: (_doc, ret) => {
-                // Замена delete на omit для избежания TS-ошибок
-                return omit(ret, ['tokens', 'password', '_id', 'roles'])
-            },
+            transform: (_doc, ret) => omit(ret, ['tokens', 'password', '_id', 'roles']),
         },
     }
 )
