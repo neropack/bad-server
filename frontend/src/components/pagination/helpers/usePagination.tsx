@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 interface IParams {
-    [key: string]: string | number | undefined | null;
+    [key: string]: string | number | undefined | null
 }
 
 interface PaginationResult<_, U> {
@@ -39,12 +39,19 @@ const usePagination = <T, U>(
     const fetchData = useCallback(
         async (params: IParams) => {
             const response = await dispatch(asyncAction(params))
-            if (response.payload && typeof response.payload === 'object' && 'pagination' in response.payload && response.payload.pagination && typeof response.payload.pagination === 'object' && 'totalPages' in response.payload.pagination) {
+            if (
+                response.payload &&
+                typeof response.payload === 'object' &&
+                'pagination' in response.payload &&
+                response.payload.pagination &&
+                typeof response.payload.pagination === 'object' &&
+                'totalPages' in response.payload.pagination
+            ) {
                 setTotalPages(response.payload.pagination.totalPages as number)
             }
         },
         [dispatch, asyncAction]
-    );
+    )
 
     const updateURL = useCallback(
         (newParams: IParams) => {
@@ -67,7 +74,7 @@ const usePagination = <T, U>(
             updateURL({ page: newPage, limit })
         },
         [totalPages, limit, updateURL]
-    );
+    )
 
     useEffect(() => {
         const params = Object.fromEntries(searchParams.entries())
@@ -77,8 +84,6 @@ const usePagination = <T, U>(
             }
         })
     }, [currentPage, limit, searchParams, data.length, setPage, fetchData])
-
-
 
     const nextPage = () => {
         if (currentPage < totalPages) {

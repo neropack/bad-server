@@ -106,7 +106,8 @@ const userSchema = new mongoose.Schema<IUser, IUserModel, IUserMethods>(
         // Возможно удаление пароля в контроллере создания, т.к. select: false не работает в случае создания сущности https://mongoosejs.com/docs/api/document.html#Document.prototype.toJSON()
         toJSON: {
             virtuals: true,
-            transform: (_doc, ret) => omit(ret, ['tokens', 'password', '_id', 'roles']),
+            transform: (_doc, ret) =>
+                omit(ret, ['tokens', 'password', '_id', 'roles']),
         },
     }
 )
@@ -130,13 +131,13 @@ userSchema.methods.generateAccessToken = function generateAccessToken() {
     // Создание accessToken токена возможно в контроллере авторизации
     return jwt.sign(
         {
-            _id: user.id,  // Замена user._id.toString() на user.id (mongoose getter)
+            _id: user.id, // Замена user._id.toString() на user.id (mongoose getter)
             email: user.email,
         },
         ACCESS_TOKEN.secret,
         {
             expiresIn: ACCESS_TOKEN.expiry,
-            subject: user.id,  // Уже использует user.id
+            subject: user.id, // Уже использует user.id
         }
     )
 }
@@ -147,12 +148,12 @@ userSchema.methods.generateRefreshToken =
         // Создание refresh токена возможно в контроллере авторизации/регистрации
         const refreshToken = jwt.sign(
             {
-                _id: user.id,  // Замена user._id.toString() на user.id
+                _id: user.id, // Замена user._id.toString() на user.id
             },
             REFRESH_TOKEN.secret,
             {
                 expiresIn: REFRESH_TOKEN.expiry,
-                subject: user.id,  // Уже использует user.id
+                subject: user.id, // Уже использует user.id
             }
         )
 

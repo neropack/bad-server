@@ -21,8 +21,8 @@ export default function AdminFilterOrders() {
     ) => {
         const statusValue =
             filters.status &&
-                typeof filters.status === 'object' &&
-                'value' in filters.status
+            typeof filters.status === 'object' &&
+            'value' in filters.status
                 ? filters.status.value
                 : filters.status
         dispatch(
