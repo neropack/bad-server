@@ -1,4 +1,4 @@
-import { Request, Express } from 'express'
+import { Request } from 'express'
 import multer, { FileFilterCallback } from 'multer'
 import { join } from 'path'
 
@@ -27,7 +27,9 @@ const storage = multer.diskStorage({
         file: Express.Multer.File,
         cb: FileNameCallback
     ) => {
-        cb(null, file.originalname)
+        //cb(null, file.originalname)
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, `${uniqueSuffix}-${file.originalname}`)
     },
 })
 
@@ -51,4 +53,5 @@ const fileFilter = (
     return cb(null, true)
 }
 
-export default multer({ storage, fileFilter })
+const limits = { fileSize: 5 * 1024 * 1024 } // 5MB
+export default multer({ storage, fileFilter, limits })
