@@ -3,7 +3,7 @@ import mongoose, { Document, Schema, Types } from 'mongoose'
 import validator from 'validator'
 import { PaymentType, phoneRegExp } from '../middlewares/validations'
 import Counter from './counter'
-import User from './user'
+import User, { IUser } from './user'
 
 export enum StatusType {
     Cancelled = 'cancelled',
@@ -13,9 +13,9 @@ export enum StatusType {
 }
 
 export interface IOrder extends Document {
-    id: Types.ObjectId
+    _id: Types.ObjectId
     orderNumber: number
-    status: string
+    status: StatusType
     totalAmount: number
     products: Types.ObjectId[]
     payment: PaymentType
@@ -58,11 +58,14 @@ const orderSchema: Schema = new Schema(
         },
         phone: {
             type: String,
+            maxlength: 15,
             required: [true, 'Поле "phone" должно быть заполнено'],
-            validate: {
-                validator: (v: string) => phoneRegExp.test(v),
-                message: 'Поле "phone" должно быть валидным телефоном.',
-            },
+            validate: [
+                {
+                    validator: (v: string) => phoneRegExp.test(v),
+                    message: 'Поле "phone" должно быть валидным телефоном.',
+                },
+            ],
         },
         comment: {
             type: String,
@@ -72,33 +75,43 @@ const orderSchema: Schema = new Schema(
     { versionKey: false, timestamps: true }
 )
 
-orderSchema.pre('save', async function incrementOrderNumber(next) {
-    const order = this
+orderSchema.pre(
+    'save',
+    async function incrementOrderNumber(this: IOrder, next) {
+        if (this.isNew) {
+            const counter = await Counter.findOneAndUpdate(
+                {},
+                { $inc: { sequenceValue: 1 } },
+                { new: true, upsert: true }
+            )
 
-    if (order.isNew) {
-        const counter = await Counter.findOneAndUpdate(
-            {},
-            { $inc: { sequenceValue: 1 } },
-            { new: true, upsert: true }
-        )
+            this.orderNumber = counter.sequenceValue
+        }
 
-        order.orderNumber = counter.sequenceValue
+        next()
     }
+)
 
-    next()
+orderSchema.post('save', async function updateUserStats(doc: IOrder) {
+    const user = (await User.findById(doc.customer)) as IUser | null
+
+    if (user) {
+        user.orders.push(doc._id)
+        await user.calculateOrderStats()
+    }
 })
 
-orderSchema.post('save', async function updateUserStats(doc) {
-    await User.findById(doc.customer).then(function updateUser(user) {
-        user?.orders.push(doc.id)
-        user?.calculateOrderStats()
-    })
-})
+orderSchema.post(
+    'findOneAndDelete',
+    async function updateUserStats(order: IOrder) {
+        const user = await User.findByIdAndUpdate(order.customer, {
+            $pull: { orders: order._id },
+        })
 
-orderSchema.post('findOneAndDelete', async function updateUserStats(order) {
-    await User.findByIdAndUpdate(order.customer, {
-        $pull: { orders: order._id },
-    }).then((user) => user?.calculateOrderStats())
-})
+        if (user) {
+            await user.calculateOrderStats()
+        }
+    }
+)
 
 export default mongoose.model<IOrder>('order', orderSchema)
