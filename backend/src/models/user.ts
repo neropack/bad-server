@@ -5,6 +5,7 @@ import mongoose, { Document, HydratedDocument, Model, Types } from 'mongoose'
 import validator from 'validator'
 import md5 from 'md5'
 
+import { omit } from 'lodash'
 import { ACCESS_TOKEN, REFRESH_TOKEN } from '../config'
 import UnauthorizedError from '../errors/unauthorized-error'
 
@@ -13,7 +14,14 @@ export enum Role {
     Admin = 'admin',
 }
 
-export interface IUser extends Document {
+interface IUserMethods {
+    generateAccessToken(): string
+    generateRefreshToken(): Promise<string>
+    calculateOrderStats(): Promise<void>
+}
+
+export interface IUser extends Document, IUserMethods {
+    _id: Types.ObjectId
     name: string
     email: string
     password: string
@@ -25,13 +33,6 @@ export interface IUser extends Document {
     orders: Types.ObjectId[]
     lastOrderDate: Date | null
     lastOrder: Types.ObjectId | null
-}
-
-interface IUserMethods {
-    generateAccessToken(): string
-    generateRefreshToken(): Promise<string>
-    toJSON(): string
-    calculateOrderStats(): Promise<void>
 }
 
 interface IUserModel extends Model<IUser, {}, IUserMethods> {
@@ -105,19 +106,14 @@ const userSchema = new mongoose.Schema<IUser, IUserModel, IUserMethods>(
         // Возможно удаление пароля в контроллере создания, т.к. select: false не работает в случае создания сущности https://mongoosejs.com/docs/api/document.html#Document.prototype.toJSON()
         toJSON: {
             virtuals: true,
-            transform: (_doc, ret) => {
-                delete ret.tokens
-                delete ret.password
-                delete ret._id
-                delete ret.roles
-                return ret
-            },
+            transform: (_doc, ret) =>
+                omit(ret, ['tokens', 'password', '_id', 'roles']),
         },
     }
 )
 
 // Возможно добавление хеша в контроллере регистрации
-userSchema.pre('save', async function hashingPassword(next) {
+userSchema.pre('save', async function (next) {
     try {
         if (this.isModified('password')) {
             this.password = md5(this.password)
@@ -131,7 +127,7 @@ userSchema.pre('save', async function hashingPassword(next) {
 // Можно лучше: централизованное создание accessToken и  refresh токена
 
 userSchema.methods.generateAccessToken = function generateAccessToken() {
-    const user = this
+    const user = this as IUser
     // Создание accessToken токена возможно в контроллере авторизации
     return jwt.sign(
         {
@@ -148,7 +144,7 @@ userSchema.methods.generateAccessToken = function generateAccessToken() {
 
 userSchema.methods.generateRefreshToken =
     async function generateRefreshToken() {
-        const user = this
+        const user = this as IUser
         // Создание refresh токена возможно в контроллере авторизации/регистрации
         const refreshToken = jwt.sign(
             {
@@ -191,7 +187,7 @@ userSchema.statics.findUserByCredentials = async function findByCredentials(
 }
 
 userSchema.methods.calculateOrderStats = async function calculateOrderStats() {
-    const user = this
+    const user = this as IUser
     const orderStats = await mongoose.model('order').aggregate([
         { $match: { customer: user._id } },
         {
