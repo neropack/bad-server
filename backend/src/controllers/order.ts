@@ -38,8 +38,8 @@ export const getOrders = async (
             if (typeof status === 'object') {
                 const keys = Object.keys(status)
 
-                for (let i = 0; i < keys.length; i+=1) {
-                    const key = keys[i];
+                for (let i = 0; i < keys.length; i += 1) {
+                    const key = keys[i]
 
                     if (prohibitedOperators.includes(key)) {
                         throw new BadRequestError('Invalid filter parameter')

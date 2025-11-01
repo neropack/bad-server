@@ -7,5 +7,5 @@ export const prohibitedOperators = [
     '$eval',
     '$mapReduce',
     '$out',
-    '$graphLookup'
+    '$graphLookup',
 ]

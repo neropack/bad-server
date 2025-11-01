@@ -63,12 +63,16 @@ const fileFilter = (
     cb: FileFilterCallback
 ) => {
     if (!types.includes(file.mimetype)) {
-        const ext = types.map(type => type.split('/')[1]);
+        const ext = types.map((type) => type.split('/')[1])
 
-        return cb(new BadRequestError(`Недопустимый тип файла. Допустимые типы: .${ext.join(', .')}`))
+        return cb(
+            new BadRequestError(
+                `Недопустимый тип файла. Допустимые типы: .${ext.join(', .')}`
+            )
+        )
     }
 
-    return cb(null, true);
+    return cb(null, true)
 }
 
 export default multer({ storage, fileFilter })

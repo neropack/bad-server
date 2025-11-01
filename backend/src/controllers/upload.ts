@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from 'express'
 import { constants } from 'http2'
-import BadRequestError from '../errors/bad-request-error'
 import sharp from 'sharp'
+import BadRequestError from '../errors/bad-request-error'
 import { fileSizeLimits, imgMinRes } from '../utils/sizes'
 
 export const uploadFile = async (
@@ -15,17 +15,33 @@ export const uploadFile = async (
         }
 
         if (req.file.size < fileSizeLimits.min) {
-            return next(new BadRequestError(`Размер файла слишком маленький. Минимальный размер - 2 KB`))
+            return next(
+                new BadRequestError(
+                    `Размер файла слишком маленький. Минимальный размер - 2 KB`
+                )
+            )
         }
 
         if (req.file.size > fileSizeLimits.max) {
-            return next(new BadRequestError(`Размер файла слишком большой. Максимальный размер - 10 МB`))
+            return next(
+                new BadRequestError(
+                    `Размер файла слишком большой. Максимальный размер - 10 МB`
+                )
+            )
         }
 
         const metadata = await sharp(req.file.path).metadata()
-        if (metadata.width != null && metadata.height != null &&
-            (metadata.width < imgMinRes.width || metadata.height < imgMinRes.height)) {
-            return next(new BadRequestError(`Минимальное разрешение изображения - ${imgMinRes.width}x${imgMinRes.height}px`))
+        if (
+            metadata.width != null &&
+            metadata.height != null &&
+            (metadata.width < imgMinRes.width ||
+                metadata.height < imgMinRes.height)
+        ) {
+            return next(
+                new BadRequestError(
+                    `Минимальное разрешение изображения - ${imgMinRes.width}x${imgMinRes.height}px`
+                )
+            )
         }
 
         const fileName = process.env.UPLOAD_PATH
