@@ -14,7 +14,7 @@ const auth = async (req: Request, res: Response, next: NextFunction) => {
     const authHeader = req.header('Authorization')
     if (!authHeader?.startsWith('Bearer ')) {
         // throw new UnauthorizedError('Невалидный токен')
-        return next(new UnauthorizedError('Невалидный токен'));
+        return next(new UnauthorizedError('Невалидный токен'))
     }
     try {
         const accessTokenParts = authHeader.split(' ')
