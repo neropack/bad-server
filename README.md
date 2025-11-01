@@ -1,6 +1,6 @@
 # Проектная работа "WebLarek. Плохой сервер.", спринт 18
 
-1) https ссылка на репозиторий GitHub: _[WebLarek. Плохой сервер](https://github.com/neropack/bad-server)_
+1) https ссылка на репозиторий GitHub: https://github.com/neropack/bad-server
 2) Имя: Дмитрий Мещеряков
 3) Кагорта: 31_full_students
 
