@@ -1,13 +1,13 @@
 import { NextFunction, Request, Response } from 'express'
 import { FilterQuery, Error as MongooseError, Types } from 'mongoose'
 import sanitize from 'sanitize-filename'
+import BadRequestError from '../errors/bad-request-error'
+import NotFoundError from '../errors/not-found-error'
 import Order, { IOrder } from '../models/order'
 import Product, { IProduct } from '../models/product'
 import User from '../models/user'
-import NotFoundError from '../errors/not-found-error'
-import BadRequestError from '../errors/bad-request-error'
-import ForbiddenError from '../errors/forbidden-error'
 import escapeRegExp from '../utils/escapeRegExp'
+import { prohibitedOperators } from '../utils/prohibitedOperators'
 
 // eslint-disable-next-line max-len
 // GET /orders?page=2&limit=5&sort=totalAmount&order=desc&orderDateFrom=2024-07-01&orderDateTo=2024-08-01&status=delivering&totalAmountFrom=100&totalAmountTo=1000&search=%2B1
@@ -18,11 +18,6 @@ export const getOrders = async (
     next: NextFunction
 ) => {
     try {
-        const userRoles = res.locals.user.roles
-        if (!userRoles.includes('admin')) {
-            return next(new ForbiddenError('Forbidden!'))
-        }
-
         const {
             page = 1,
             limit = 10,
@@ -41,6 +36,15 @@ export const getOrders = async (
 
         if (status) {
             if (typeof status === 'object') {
+                const keys = Object.keys(status)
+
+                for (let i = 0; i < keys.length; i+=1) {
+                    const key = keys[i];
+
+                    if (prohibitedOperators.includes(key)) {
+                        throw new BadRequestError('Invalid filter parameter')
+                    }
+                }
                 Object.assign(filters, status)
             }
             if (typeof status === 'string') {
@@ -204,9 +208,7 @@ export const getOrdersCurrentUser = async (
             orders = orders.filter((order) => {
                 // eslint-disable-next-line max-len
                 const matchesProductTitle = order.products.some((product) =>
-                    productIds.some((id) =>
-                        (id as Types.ObjectId).equals(product._id)
-                    )
+                    productIds.some((id) => id.equals(product._id))
                 )
                 // eslint-disable-next-line max-len
                 const matchesOrderNumber =
@@ -309,9 +311,7 @@ export const createOrder = async (
         const sanitizedComment = sanitize(comment)
 
         items.forEach((id: Types.ObjectId) => {
-            const product = products.find((p) =>
-                (p._id as Types.ObjectId).equals(id)
-            )
+            const product = products.find((p) => p._id.equals(id))
             if (!product) {
                 throw new BadRequestError(`Товар с id ${id} не найден`)
             }
