@@ -4,8 +4,8 @@ import jwt from 'jsonwebtoken'
 import mongoose, { Document, HydratedDocument, Model, Types } from 'mongoose'
 import validator from 'validator'
 import md5 from 'md5'
-import omit from 'lodash/omit'
 
+import { omit } from 'lodash'
 import { ACCESS_TOKEN, REFRESH_TOKEN } from '../config'
 import UnauthorizedError from '../errors/unauthorized-error'
 
@@ -14,7 +14,13 @@ export enum Role {
     Admin = 'admin',
 }
 
-export interface IUser extends Document {
+interface IUserMethods {
+    generateAccessToken(): string
+    generateRefreshToken(): Promise<string>
+    calculateOrderStats(): Promise<void>
+}
+
+export interface IUser extends Document, IUserMethods {
     _id: Types.ObjectId
     name: string
     email: string
@@ -27,13 +33,6 @@ export interface IUser extends Document {
     orders: Types.ObjectId[]
     lastOrderDate: Date | null
     lastOrder: Types.ObjectId | null
-}
-
-interface IUserMethods {
-    generateAccessToken(): string
-    generateRefreshToken(): Promise<string>
-    toJSON(): string
-    calculateOrderStats(): Promise<void>
 }
 
 interface IUserModel extends Model<IUser, {}, IUserMethods> {
@@ -114,7 +113,7 @@ const userSchema = new mongoose.Schema<IUser, IUserModel, IUserMethods>(
 )
 
 // Возможно добавление хеша в контроллере регистрации
-userSchema.pre('save', async function hashingPassword(next) {
+userSchema.pre('save', async function (next) {
     try {
         if (this.isModified('password')) {
             this.password = md5(this.password)
@@ -128,33 +127,33 @@ userSchema.pre('save', async function hashingPassword(next) {
 // Можно лучше: централизованное создание accessToken и  refresh токена
 
 userSchema.methods.generateAccessToken = function generateAccessToken() {
-    const user = this
+    const user = this as IUser
     // Создание accessToken токена возможно в контроллере авторизации
     return jwt.sign(
         {
-            _id: user.id, // Замена user._id.toString() на user.id (mongoose getter)
+            _id: user._id.toString(),
             email: user.email,
         },
         ACCESS_TOKEN.secret,
         {
             expiresIn: ACCESS_TOKEN.expiry,
-            subject: user.id, // Уже использует user.id
+            subject: user.id.toString(),
         }
     )
 }
 
 userSchema.methods.generateRefreshToken =
     async function generateRefreshToken() {
-        const user = this
+        const user = this as IUser
         // Создание refresh токена возможно в контроллере авторизации/регистрации
         const refreshToken = jwt.sign(
             {
-                _id: user.id, // Замена user._id.toString() на user.id
+                _id: user._id.toString(),
             },
             REFRESH_TOKEN.secret,
             {
                 expiresIn: REFRESH_TOKEN.expiry,
-                subject: user.id, // Уже использует user.id
+                subject: user.id.toString(),
             }
         )
 
@@ -188,7 +187,7 @@ userSchema.statics.findUserByCredentials = async function findByCredentials(
 }
 
 userSchema.methods.calculateOrderStats = async function calculateOrderStats() {
-    const user = this
+    const user = this as IUser
     const orderStats = await mongoose.model('order').aggregate([
         { $match: { customer: user._id } },
         {
